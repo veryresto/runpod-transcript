@@ -1,0 +1,12 @@
+.DS_Store
+.env
+.venv/
+__pycache__/
+*.py[cod]
+*_aligned.json
+*_diarization.csv
+*_final.json
+*_transcript.txt
+*.mp4
+*.webm
+*.wav
