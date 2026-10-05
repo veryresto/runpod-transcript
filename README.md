@@ -61,6 +61,23 @@ Download and verify the results before deleting the Pod. Stopping a Pod ends
 GPU compute charges but its persistent volume continues to incur storage fees;
 deleting the Pod removes that volume.
 
+## Delete a Pod and its volume disk
+
+After downloading and verifying all output, permanently delete the Pod with:
+
+```bash
+./destroy-pod.sh POD_ID
+```
+
+The script displays the current Pod details and requires you to type the Pod ID
+again before deletion. For deliberate non-interactive automation, pass `--yes`:
+
+```bash
+./destroy-pod.sh POD_ID --yes
+```
+
+Deletion cannot be undone. It removes the Pod and its attached volume disk.
+
 ## Optional overrides
 
 `create-pod.sh` supports environment-variable overrides, including `POD_NAME`,
