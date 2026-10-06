@@ -14,8 +14,8 @@ Install and authenticate `runpodctl`, then run:
 The script recreates the original Secure Cloud configuration and waits until SSH
 is reachable. Creating the Pod starts GPU billing.
 
-The default data center is `EUR-IS-2`. If it has no RTX 4090 capacity, select an
-available data center and override it:
+By default, Runpod selects any data center with matching capacity. To restrict
+placement to a particular data center, override it explicitly:
 
 ```bash
 DATA_CENTER_IDS=EU-SE-1 ./create-pod.sh
@@ -56,6 +56,16 @@ The script writes these files beside the input media:
 - `*_diarization.csv`
 - `*_final.json`
 - `*_transcript.txt`
+
+To download and transcribe every signed URL in `recordings.txt`, put one URL per
+line and run this inside the Pod:
+
+```bash
+./transcribe-recordings.sh
+```
+
+Recordings and generated files are stored under `/workspace/recordings`. Existing
+downloads and completed transcripts are reused if the batch command is restarted.
 
 Download and verify the results before deleting the Pod. Stopping a Pod ends
 GPU compute charges but its persistent volume continues to incur storage fees;

@@ -4,6 +4,10 @@ import sys
 import time
 from pathlib import Path
 
+# Some WhisperX/Pyannote checkpoints contain trusted OmegaConf objects. PyTorch
+# 2.6+ otherwise defaults torch.load to weights_only=True and may reject them.
+os.environ.setdefault("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD", "1")
+
 import torch
 import whisperx
 from whisperx.diarize import DiarizationPipeline

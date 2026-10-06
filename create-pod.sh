@@ -12,26 +12,36 @@ CONTAINER_DISK_GB="${CONTAINER_DISK_GB:-30}"
 VOLUME_GB="${VOLUME_GB:-50}"
 VOLUME_MOUNT_PATH="${VOLUME_MOUNT_PATH:-/workspace}"
 POD_PORTS="${POD_PORTS:-22/tcp,8888/http}"
-DATA_CENTER_IDS="${DATA_CENTER_IDS:-EUR-IS-2}"
+DATA_CENTER_IDS="${DATA_CENTER_IDS:-}"
 
 if ! command -v runpodctl >/dev/null 2>&1; then
   echo "ERROR: runpodctl is not installed or is not on PATH." >&2
   exit 1
 fi
 
-echo "Creating ${POD_NAME} with ${GPU_COUNT}x ${GPU_ID} in ${DATA_CENTER_IDS}..."
+if [[ -n "${DATA_CENTER_IDS}" ]]; then
+  echo "Creating ${POD_NAME} with ${GPU_COUNT}x ${GPU_ID} in ${DATA_CENTER_IDS}..."
+else
+  echo "Creating ${POD_NAME} with ${GPU_COUNT}x ${GPU_ID} in any available data center..."
+fi
 echo "This creates a billable Runpod resource."
 
-runpodctl pod create \
-  --name "${POD_NAME}" \
-  --image "${POD_IMAGE}" \
-  --gpu-id "${GPU_ID}" \
-  --gpu-count "${GPU_COUNT}" \
-  --cloud-type "${CLOUD_TYPE}" \
-  --container-disk-in-gb "${CONTAINER_DISK_GB}" \
-  --volume-in-gb "${VOLUME_GB}" \
-  --volume-mount-path "${VOLUME_MOUNT_PATH}" \
-  --ports "${POD_PORTS}" \
-  --data-center-ids "${DATA_CENTER_IDS}" \
-  --wait \
+CREATE_ARGS=(
+  --name "${POD_NAME}"
+  --image "${POD_IMAGE}"
+  --gpu-id "${GPU_ID}"
+  --gpu-count "${GPU_COUNT}"
+  --cloud-type "${CLOUD_TYPE}"
+  --container-disk-in-gb "${CONTAINER_DISK_GB}"
+  --volume-in-gb "${VOLUME_GB}"
+  --volume-mount-path "${VOLUME_MOUNT_PATH}"
+  --ports "${POD_PORTS}"
+  --wait
   --wait-timeout 15m
+)
+
+if [[ -n "${DATA_CENTER_IDS}" ]]; then
+  CREATE_ARGS+=(--data-center-ids "${DATA_CENTER_IDS}")
+fi
+
+runpodctl pod create "${CREATE_ARGS[@]}"

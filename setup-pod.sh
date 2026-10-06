@@ -23,6 +23,7 @@ apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   ffmpeg \
   git \
+  curl \
   python3-venv
 
 echo "Creating Python environment at ${VENV_DIR}..."
@@ -52,6 +53,9 @@ Before transcription, provide a NEW Hugging Face read token at runtime:
 
 Then run:
   ${VENV_DIR}/bin/python ${SCRIPT_DIR}/transcribe_meeting.py /workspace/meeting.webm
+
+Or process every URL in recordings.txt:
+  ${SCRIPT_DIR}/transcribe-recordings.sh
 
 Model caches are stored under /workspace/.cache so they survive Pod stops.
 EOF
