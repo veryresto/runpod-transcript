@@ -124,9 +124,18 @@ The image contains the pinned Runpod PyTorch/CUDA base, system packages,
 `/opt/venv`, and the application under `/opt/runpod-transcript`. Runtime tokens,
 URLs, recordings, model caches, and results are not baked into it.
 
-GitHub Actions builds and publishes the `linux/amd64` image after changes reach
-`master`, when a `v*` tag is pushed, or through manual workflow dispatch. For a
-private image, provide a Runpod registry credential:
+GitHub Actions builds and publishes the `linux/amd64` image only when a `v*` tag
+is pushed. The tagged commit must be contained in `master`. The build publishes
+the version tag, commit SHA tag, and `latest`:
+
+```bash
+git switch master
+git pull --ff-only
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+For a private image, provide a Runpod registry credential:
 
 ```bash
 REGISTRY_AUTH_ID=YOUR_RUNPOD_REGISTRY_AUTH_ID ./create-pod.sh
