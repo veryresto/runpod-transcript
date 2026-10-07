@@ -15,6 +15,7 @@ VOLUME_MOUNT_PATH="${VOLUME_MOUNT_PATH:-/workspace}"
 POD_PORTS="${POD_PORTS:-22/tcp,8888/http}"
 DATA_CENTER_IDS="${DATA_CENTER_IDS:-}"
 CONNECT_SCRIPT="${CONNECT_SCRIPT:-${SCRIPT_DIR}/connect-pod.sh}"
+DOWNLOAD_SCRIPT="${DOWNLOAD_SCRIPT:-${SCRIPT_DIR}/download-results.sh}"
 
 if ! command -v runpodctl >/dev/null 2>&1; then
   echo "ERROR: runpodctl is not installed or is not on PATH." >&2
@@ -66,11 +67,44 @@ if not command:
 print(shlex.join(shlex.split(command)))
 ')"
 
+IFS=$'\t' read -r SSH_IP SSH_PORT SSH_KEY < <(printf '%s' "${CREATE_OUTPUT}" | python3 -c '
+import json
+import sys
+
+pod = json.load(sys.stdin)
+ssh = pod.get("ssh") or {}
+ip = ssh.get("ip")
+port = ssh.get("port")
+key = (ssh.get("ssh_key") or {}).get("path")
+if not all((ip, port, key)):
+    raise SystemExit("ERROR: Pod response did not contain complete SCP connection details")
+for value in (ip, str(port), key):
+    if "\t" in value or "\n" in value:
+        raise SystemExit("ERROR: Pod response contained invalid SCP connection details")
+print(ip, port, key, sep="\t")
+')
+
 printf '#!/usr/bin/env bash\nset -Eeuo pipefail\nexec %s "$@"\n' \
   "${SSH_COMMAND}" > "${CONNECT_SCRIPT}.tmp"
 chmod 700 "${CONNECT_SCRIPT}.tmp"
 mv "${CONNECT_SCRIPT}.tmp" "${CONNECT_SCRIPT}"
 
+{
+  printf '#!/usr/bin/env bash\nset -Eeuo pipefail\n\n'
+  printf 'SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"\n'
+  printf 'RESULTS_DIR="${1:-${SCRIPT_DIR}/results}"\n'
+  printf 'SSH_IP=%q\n' "${SSH_IP}"
+  printf 'SSH_PORT=%q\n' "${SSH_PORT}"
+  printf 'SSH_KEY=%q\n\n' "${SSH_KEY}"
+  printf 'mkdir -p "${RESULTS_DIR}"\n'
+  printf 'scp -i "${SSH_KEY}" -P "${SSH_PORT}" "root@${SSH_IP}:/workspace/recordings/*.txt" "${RESULTS_DIR}/"\n'
+  printf 'echo "Downloaded text results to ${RESULTS_DIR}"\n'
+} > "${DOWNLOAD_SCRIPT}.tmp"
+chmod 700 "${DOWNLOAD_SCRIPT}.tmp"
+mv "${DOWNLOAD_SCRIPT}.tmp" "${DOWNLOAD_SCRIPT}"
+
 echo
 echo "SSH helper created: ${CONNECT_SCRIPT}"
 echo "Connect with: ${CONNECT_SCRIPT}"
+echo "Download helper created: ${DOWNLOAD_SCRIPT}"
+echo "Download results with: ${DOWNLOAD_SCRIPT}"

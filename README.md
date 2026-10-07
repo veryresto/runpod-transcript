@@ -21,8 +21,15 @@ Connect to the newly created Pod with:
 ./connect-pod.sh
 ```
 
-The generated helper is replaced whenever a new Pod is created and is ignored by
-Git because its host and port are temporary.
+After transcription finishes, download every text result into the local
+`./results` directory with:
+
+```bash
+./download-results.sh
+```
+
+Both generated helpers are replaced whenever a new Pod is created and are ignored
+by Git because their host and port are temporary.
 
 By default, Runpod selects any data center with matching capacity. To restrict
 placement to a particular data center, override it explicitly:
