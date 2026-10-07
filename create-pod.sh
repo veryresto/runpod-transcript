@@ -16,6 +16,7 @@ POD_PORTS="${POD_PORTS:-22/tcp,8888/http}"
 DATA_CENTER_IDS="${DATA_CENTER_IDS:-}"
 CONNECT_SCRIPT="${CONNECT_SCRIPT:-${SCRIPT_DIR}/connect-pod.sh}"
 DOWNLOAD_SCRIPT="${DOWNLOAD_SCRIPT:-${SCRIPT_DIR}/download-results.sh}"
+UPLOAD_SCRIPT="${UPLOAD_SCRIPT:-${SCRIPT_DIR}/upload-inputs.sh}"
 
 if ! command -v runpodctl >/dev/null 2>&1; then
   echo "ERROR: runpodctl is not installed or is not on PATH." >&2
@@ -103,8 +104,32 @@ mv "${CONNECT_SCRIPT}.tmp" "${CONNECT_SCRIPT}"
 chmod 700 "${DOWNLOAD_SCRIPT}.tmp"
 mv "${DOWNLOAD_SCRIPT}.tmp" "${DOWNLOAD_SCRIPT}"
 
+{
+  printf '#!/usr/bin/env bash\nset -Eeuo pipefail\n\n'
+  printf 'SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"\n'
+  printf 'SSH_IP=%q\n' "${SSH_IP}"
+  printf 'SSH_PORT=%q\n' "${SSH_PORT}"
+  printf 'SSH_KEY=%q\n\n' "${SSH_KEY}"
+  printf 'for input_file in .env recordings.txt; do\n'
+  printf '  if [[ ! -f "${SCRIPT_DIR}/${input_file}" ]]; then\n'
+  printf '    echo "ERROR: Missing ${SCRIPT_DIR}/${input_file}" >&2\n'
+  printf '    exit 1\n'
+  printf '  fi\n'
+  printf 'done\n\n'
+  printf 'if ! ssh -i "${SSH_KEY}" -p "${SSH_PORT}" "root@${SSH_IP}" '\''test -d /workspace/runpod-transcript'\''; then\n'
+  printf '  echo "ERROR: Clone the repository to /workspace/runpod-transcript before uploading inputs." >&2\n'
+  printf '  exit 1\n'
+  printf 'fi\n\n'
+  printf 'scp -i "${SSH_KEY}" -P "${SSH_PORT}" "${SCRIPT_DIR}/.env" "${SCRIPT_DIR}/recordings.txt" "root@${SSH_IP}:/workspace/runpod-transcript/"\n'
+  printf 'echo "Uploaded .env and recordings.txt to /workspace/runpod-transcript/"\n'
+} > "${UPLOAD_SCRIPT}.tmp"
+chmod 700 "${UPLOAD_SCRIPT}.tmp"
+mv "${UPLOAD_SCRIPT}.tmp" "${UPLOAD_SCRIPT}"
+
 echo
 echo "SSH helper created: ${CONNECT_SCRIPT}"
 echo "Connect with: ${CONNECT_SCRIPT}"
 echo "Download helper created: ${DOWNLOAD_SCRIPT}"
 echo "Download results with: ${DOWNLOAD_SCRIPT}"
+echo "Upload helper created: ${UPLOAD_SCRIPT}"
+echo "Upload inputs with: ${UPLOAD_SCRIPT}"

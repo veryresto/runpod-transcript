@@ -28,7 +28,7 @@ After transcription finishes, download every text result into the local
 ./download-results.sh
 ```
 
-Both generated helpers are replaced whenever a new Pod is created and are ignored
+All generated helpers are replaced whenever a new Pod is created and are ignored
 by Git because their host and port are temporary.
 
 By default, Runpod selects any data center with matching capacity. To restrict
@@ -48,6 +48,13 @@ cd /workspace
 git clone https://github.com/veryresto/runpod-transcript.git
 cd runpod-transcript
 ./setup-pod.sh
+```
+
+After cloning the repository, run this from a separate terminal on your laptop to
+upload the local `.env` and `recordings.txt` files:
+
+```bash
+./upload-inputs.sh
 ```
 
 The setup creates `/workspace/venv`. Package and model caches also live under

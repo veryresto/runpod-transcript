@@ -14,3 +14,4 @@ recordings.txt
 results/
 connect-pod.sh
 download-results.sh
+upload-inputs.sh
