@@ -1,3 +1,5 @@
 # Keep this pinned so a newly-created Pod gets the same transcription stack.
 # PyTorch and CUDA are supplied by the Runpod base image.
 whisperx==3.8.6
+# The Runpod PyTorch image enables HF_HUB_ENABLE_HF_TRANSFER by default.
+hf_transfer==0.1.9

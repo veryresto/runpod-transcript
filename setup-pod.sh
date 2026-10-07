@@ -35,6 +35,7 @@ echo "Checking CUDA and WhisperX..."
 "${VENV_DIR}/bin/python" - <<'PY'
 import torch
 import whisperx
+import hf_transfer
 
 if not torch.cuda.is_available():
     raise SystemExit("ERROR: PyTorch cannot access CUDA")
@@ -42,6 +43,7 @@ if not torch.cuda.is_available():
 print(f"PyTorch: {torch.__version__}")
 print(f"GPU: {torch.cuda.get_device_name(0)}")
 print(f"WhisperX: {getattr(whisperx, '__version__', 'installed')}")
+print(f"HF Transfer: {getattr(hf_transfer, '__version__', 'installed')}")
 PY
 
 cat <<EOF
