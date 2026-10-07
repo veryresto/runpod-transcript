@@ -93,7 +93,7 @@ After downloading and verifying all output, permanently delete the Pod with:
 ```
 
 If no Pod ID is supplied, the script shows a numbered list and asks which Pod
-to delete:
+to delete, followed by a yes/no confirmation:
 
 ```bash
 ./destroy-pod.sh

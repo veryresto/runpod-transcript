@@ -10,6 +10,7 @@ usage() {
 
 POD_ID="${1:-}"
 AUTO_CONFIRM="${2:-}"
+INTERACTIVE_SELECTION=false
 [[ -z "${AUTO_CONFIRM}" || "${AUTO_CONFIRM}" == "--yes" ]] || usage
 [[ "${POD_ID}" != "--yes" ]] || usage
 
@@ -19,6 +20,7 @@ if ! command -v runpodctl >/dev/null 2>&1; then
 fi
 
 if [[ -z "${POD_ID}" ]]; then
+  INTERACTIVE_SELECTION=true
   if ! command -v python3 >/dev/null 2>&1; then
     echo "ERROR: python3 is required for interactive Pod selection." >&2
     exit 1
@@ -79,10 +81,18 @@ echo "WARNING: This permanently deletes the Pod and its attached volume disk."
 echo "Files in that volume cannot be recovered."
 
 if [[ "${AUTO_CONFIRM}" != "--yes" ]]; then
-  read -r -p "Type the Pod ID (${POD_ID}) to confirm: " CONFIRMATION
-  if [[ "${CONFIRMATION}" != "${POD_ID}" ]]; then
-    echo "Confirmation did not match. Nothing was deleted." >&2
-    exit 1
+  if [[ "${INTERACTIVE_SELECTION}" == true ]]; then
+    read -r -p "Are you sure you want to permanently delete Pod ${POD_ID}? [y/N] " CONFIRMATION
+    if [[ ! "${CONFIRMATION}" =~ ^[Yy]([Ee][Ss])?$ ]]; then
+      echo "Deletion cancelled. Nothing was deleted." >&2
+      exit 1
+    fi
+  else
+    read -r -p "Type the Pod ID (${POD_ID}) to confirm: " CONFIRMATION
+    if [[ "${CONFIRMATION}" != "${POD_ID}" ]]; then
+      echo "Confirmation did not match. Nothing was deleted." >&2
+      exit 1
+    fi
   fi
 fi
 
