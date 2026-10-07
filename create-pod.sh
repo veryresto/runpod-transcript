@@ -18,6 +18,7 @@ CONNECT_SCRIPT="${CONNECT_SCRIPT:-${SCRIPT_DIR}/connect-pod.sh}"
 DOWNLOAD_SCRIPT="${DOWNLOAD_SCRIPT:-${SCRIPT_DIR}/download-results.sh}"
 UPLOAD_SCRIPT="${UPLOAD_SCRIPT:-${SCRIPT_DIR}/upload-inputs.sh}"
 REMOTE_SETUP_SCRIPT="${REMOTE_SETUP_SCRIPT:-${SCRIPT_DIR}/setup-remote-pod.sh}"
+REMOTE_TRANSCRIBE_SCRIPT="${REMOTE_TRANSCRIBE_SCRIPT:-${SCRIPT_DIR}/transcribe-remote-pod.sh}"
 
 if ! command -v runpodctl >/dev/null 2>&1; then
   echo "ERROR: runpodctl is not installed or is not on PATH." >&2
@@ -150,6 +151,26 @@ mv "${UPLOAD_SCRIPT}.tmp" "${UPLOAD_SCRIPT}"
 chmod 700 "${REMOTE_SETUP_SCRIPT}.tmp"
 mv "${REMOTE_SETUP_SCRIPT}.tmp" "${REMOTE_SETUP_SCRIPT}"
 
+{
+  printf '#!/usr/bin/env bash\nset -Eeuo pipefail\n\n'
+  printf 'SSH_IP=%q\n' "${SSH_IP}"
+  printf 'SSH_PORT=%q\n' "${SSH_PORT}"
+  printf 'SSH_KEY=%q\n\n' "${SSH_KEY}"
+  printf 'ssh -i "${SSH_KEY}" -p "${SSH_PORT}" "root@${SSH_IP}" '\''bash -s'\'' <<'\''REMOTE_TRANSCRIBE'\''\n'
+  printf 'set -Eeuo pipefail\n'
+  printf 'cd /workspace/runpod-transcript\n'
+  printf 'for input_file in .env recordings.txt; do\n'
+  printf '  if [[ ! -f "${input_file}" ]]; then\n'
+  printf '    echo "ERROR: Missing /workspace/runpod-transcript/${input_file}. Run upload-inputs.sh from the laptop first." >&2\n'
+  printf '    exit 1\n'
+  printf '  fi\n'
+  printf 'done\n'
+  printf './transcribe-recordings.sh\n'
+  printf 'REMOTE_TRANSCRIBE\n'
+} > "${REMOTE_TRANSCRIBE_SCRIPT}.tmp"
+chmod 700 "${REMOTE_TRANSCRIBE_SCRIPT}.tmp"
+mv "${REMOTE_TRANSCRIBE_SCRIPT}.tmp" "${REMOTE_TRANSCRIBE_SCRIPT}"
+
 echo
 echo "SSH helper created: ${CONNECT_SCRIPT}"
 echo "Connect with: ${CONNECT_SCRIPT}"
@@ -159,3 +180,5 @@ echo "Upload helper created: ${UPLOAD_SCRIPT}"
 echo "Upload inputs with: ${UPLOAD_SCRIPT}"
 echo "Remote setup helper created: ${REMOTE_SETUP_SCRIPT}"
 echo "Set up the Pod with: ${REMOTE_SETUP_SCRIPT}"
+echo "Remote transcription helper created: ${REMOTE_TRANSCRIBE_SCRIPT}"
+echo "Transcribe recordings with: ${REMOTE_TRANSCRIBE_SCRIPT}"

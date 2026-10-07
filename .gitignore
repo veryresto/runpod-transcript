@@ -16,3 +16,4 @@ connect-pod.sh
 download-results.sh
 upload-inputs.sh
 setup-remote-pod.sh
+transcribe-remote-pod.sh

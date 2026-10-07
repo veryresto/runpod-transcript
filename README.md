@@ -90,7 +90,14 @@ The script writes these files beside the input media:
 - `*_transcript.txt`
 
 To download and transcribe every signed URL in `recordings.txt`, put one URL per
-line and run this inside the Pod:
+line, upload the inputs, and run this from your laptop:
+
+```bash
+./upload-inputs.sh
+./transcribe-remote-pod.sh
+```
+
+The existing manual command inside the Pod remains available:
 
 ```bash
 ./transcribe-recordings.sh
