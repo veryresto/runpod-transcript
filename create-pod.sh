@@ -5,7 +5,7 @@ set -Eeuo pipefail
 # by exporting the corresponding variable before running this script.
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 POD_NAME="${POD_NAME:-whisperx-meeting}"
-POD_IMAGE="${POD_IMAGE:-runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404}"
+POD_IMAGE="${POD_IMAGE:-ghcr.io/veryresto/runpod-transcript:latest}"
 GPU_ID="${GPU_ID:-NVIDIA GeForce RTX 4090}"
 GPU_COUNT="${GPU_COUNT:-1}"
 CLOUD_TYPE="${CLOUD_TYPE:-SECURE}"
@@ -14,6 +14,7 @@ VOLUME_GB="${VOLUME_GB:-50}"
 VOLUME_MOUNT_PATH="${VOLUME_MOUNT_PATH:-/workspace}"
 POD_PORTS="${POD_PORTS:-22/tcp,8888/http}"
 DATA_CENTER_IDS="${DATA_CENTER_IDS:-}"
+REGISTRY_AUTH_ID="${REGISTRY_AUTH_ID:-}"
 CONNECT_SCRIPT="${CONNECT_SCRIPT:-${SCRIPT_DIR}/connect-pod.sh}"
 DOWNLOAD_SCRIPT="${DOWNLOAD_SCRIPT:-${SCRIPT_DIR}/download-results.sh}"
 UPLOAD_SCRIPT="${UPLOAD_SCRIPT:-${SCRIPT_DIR}/upload-inputs.sh}"
@@ -53,6 +54,10 @@ CREATE_ARGS=(
 
 if [[ -n "${DATA_CENTER_IDS}" ]]; then
   CREATE_ARGS+=(--data-center-ids "${DATA_CENTER_IDS}")
+fi
+
+if [[ -n "${REGISTRY_AUTH_ID}" ]]; then
+  CREATE_ARGS+=(--registry-auth-id "${REGISTRY_AUTH_ID}")
 fi
 
 CREATE_OUTPUT="$(runpodctl pod create "${CREATE_ARGS[@]}")"
@@ -118,12 +123,9 @@ mv "${DOWNLOAD_SCRIPT}.tmp" "${DOWNLOAD_SCRIPT}"
   printf '    exit 1\n'
   printf '  fi\n'
   printf 'done\n\n'
-  printf 'if ! ssh -i "${SSH_KEY}" -p "${SSH_PORT}" "root@${SSH_IP}" '\''test -d /workspace/runpod-transcript'\''; then\n'
-  printf '  echo "ERROR: Clone the repository to /workspace/runpod-transcript before uploading inputs." >&2\n'
-  printf '  exit 1\n'
-  printf 'fi\n\n'
-  printf 'scp -i "${SSH_KEY}" -P "${SSH_PORT}" "${SCRIPT_DIR}/.env" "${SCRIPT_DIR}/recordings.txt" "root@${SSH_IP}:/workspace/runpod-transcript/"\n'
-  printf 'echo "Uploaded .env and recordings.txt to /workspace/runpod-transcript/"\n'
+  printf 'ssh -i "${SSH_KEY}" -p "${SSH_PORT}" "root@${SSH_IP}" '\''mkdir -p /workspace/runpod-inputs'\''\n'
+  printf 'scp -i "${SSH_KEY}" -P "${SSH_PORT}" "${SCRIPT_DIR}/.env" "${SCRIPT_DIR}/recordings.txt" "root@${SSH_IP}:/workspace/runpod-inputs/"\n'
+  printf 'echo "Uploaded .env and recordings.txt to /workspace/runpod-inputs/"\n'
 } > "${UPLOAD_SCRIPT}.tmp"
 chmod 700 "${UPLOAD_SCRIPT}.tmp"
 mv "${UPLOAD_SCRIPT}.tmp" "${UPLOAD_SCRIPT}"
@@ -135,17 +137,21 @@ mv "${UPLOAD_SCRIPT}.tmp" "${UPLOAD_SCRIPT}"
   printf 'SSH_KEY=%q\n\n' "${SSH_KEY}"
   printf 'ssh -i "${SSH_KEY}" -p "${SSH_PORT}" "root@${SSH_IP}" '\''bash -s'\'' <<'\''REMOTE_SETUP'\''\n'
   printf 'set -Eeuo pipefail\n'
-  printf 'cd /workspace\n'
-  printf 'if [[ -d runpod-transcript/.git ]]; then\n'
-  printf '  git -C runpod-transcript pull --ff-only\n'
-  printf 'elif [[ -e runpod-transcript ]]; then\n'
-  printf '  echo "ERROR: /workspace/runpod-transcript exists but is not a Git repository." >&2\n'
-  printf '  exit 1\n'
+  printf 'if [[ -x /opt/runpod-transcript/setup-pod.sh ]]; then\n'
+  printf '  /opt/runpod-transcript/setup-pod.sh\n'
   printf 'else\n'
-  printf '  git clone https://github.com/veryresto/runpod-transcript.git\n'
+  printf '  cd /workspace\n'
+  printf '  if [[ -d runpod-transcript/.git ]]; then\n'
+  printf '    git -C runpod-transcript pull --ff-only\n'
+  printf '  elif [[ -e runpod-transcript ]]; then\n'
+  printf '    echo "ERROR: /workspace/runpod-transcript exists but is not a Git repository." >&2\n'
+  printf '    exit 1\n'
+  printf '  else\n'
+  printf '    git clone https://github.com/veryresto/runpod-transcript.git\n'
+  printf '  fi\n'
+  printf '  cd runpod-transcript\n'
+  printf '  ./setup-pod.sh\n'
   printf 'fi\n'
-  printf 'cd runpod-transcript\n'
-  printf './setup-pod.sh\n'
   printf 'REMOTE_SETUP\n'
 } > "${REMOTE_SETUP_SCRIPT}.tmp"
 chmod 700 "${REMOTE_SETUP_SCRIPT}.tmp"
@@ -158,14 +164,18 @@ mv "${REMOTE_SETUP_SCRIPT}.tmp" "${REMOTE_SETUP_SCRIPT}"
   printf 'SSH_KEY=%q\n\n' "${SSH_KEY}"
   printf 'ssh -i "${SSH_KEY}" -p "${SSH_PORT}" "root@${SSH_IP}" '\''bash -s'\'' <<'\''REMOTE_TRANSCRIBE'\''\n'
   printf 'set -Eeuo pipefail\n'
-  printf 'cd /workspace/runpod-transcript\n'
+  printf 'if [[ -x /opt/runpod-transcript/transcribe-recordings.sh ]]; then\n'
+  printf '  APP_DIR=/opt/runpod-transcript\n'
+  printf 'else\n'
+  printf '  APP_DIR=/workspace/runpod-transcript\n'
+  printf 'fi\n'
   printf 'for input_file in .env recordings.txt; do\n'
-  printf '  if [[ ! -f "${input_file}" ]]; then\n'
-  printf '    echo "ERROR: Missing /workspace/runpod-transcript/${input_file}. Run upload-inputs.sh from the laptop first." >&2\n'
+  printf '  if [[ ! -f "/workspace/runpod-inputs/${input_file}" ]]; then\n'
+  printf '    echo "ERROR: Missing /workspace/runpod-inputs/${input_file}. Run upload-inputs.sh from the laptop first." >&2\n'
   printf '    exit 1\n'
   printf '  fi\n'
   printf 'done\n'
-  printf './transcribe-recordings.sh\n'
+  printf 'ENV_FILE=/workspace/runpod-inputs/.env RECORDINGS_FILE=/workspace/runpod-inputs/recordings.txt "${APP_DIR}/transcribe-recordings.sh"\n'
   printf 'REMOTE_TRANSCRIBE\n'
 } > "${REMOTE_TRANSCRIBE_SCRIPT}.tmp"
 chmod 700 "${REMOTE_TRANSCRIBE_SCRIPT}.tmp"
