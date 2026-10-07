@@ -58,6 +58,19 @@ cannot be undone.
 The transcription command is restartable. Existing recording downloads and
 completed transcripts under `/workspace/recordings` are reused.
 
+## Serverless proof of concept
+
+An alternative scale-to-zero workflow is available for sporadic recordings:
+
+```bash
+./create-serverless.sh
+./transcribe-serverless.sh
+./delete-serverless.sh
+```
+
+See [SERVERLESS.md](SERVERLESS.md) for image publishing, endpoint configuration,
+input/output behavior, cold-model downloads, and cleanup.
+
 ## Generated helper scripts
 
 `create-pod.sh` waits for SSH and then creates these local, Pod-specific files:

@@ -19,3 +19,5 @@ results
 setup-remote-pod.sh
 transcribe-remote-pod.sh
 upload-inputs.sh
+.serverless-endpoint-id
+.serverless-template-id

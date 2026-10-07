@@ -1,0 +1,22 @@
+FROM runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404
+
+LABEL org.opencontainers.image.source="https://github.com/veryresto/runpod-transcript"
+LABEL org.opencontainers.image.description="Runpod Serverless WhisperX transcription worker"
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    HF_HOME=/root/.cache/huggingface \
+    TORCH_HOME=/root/.cache/torch \
+    XDG_CACHE_HOME=/root/.cache
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY requirements.txt requirements-serverless.txt ./
+RUN python3 -m pip install --no-cache-dir -r requirements-serverless.txt
+
+COPY transcription.py serverless_handler.py ./
+
+CMD ["python3", "-u", "serverless_handler.py"]
