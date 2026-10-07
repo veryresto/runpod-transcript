@@ -41,9 +41,11 @@ while IFS= read -r recording_url || [[ -n "${recording_url}" ]]; do
 
   if [[ ! -s "${recording_file}" ]]; then
     echo "Downloading recording..."
+    download_started="${SECONDS}"
     curl --fail --location --retry 3 --retry-all-errors \
       --output "${recording_file}.part" "${recording_url}"
     mv "${recording_file}.part" "${recording_file}"
+    echo "TIMING ${recording_name}_download_seconds=$((SECONDS - download_started))"
   else
     echo "Using existing download: ${recording_file}"
   fi
@@ -51,7 +53,9 @@ while IFS= read -r recording_url || [[ -n "${recording_url}" ]]; do
   if [[ -s "${transcript_file}" ]]; then
     echo "Using existing transcript: ${transcript_file}"
   else
+    processing_started="${SECONDS}"
     "${PYTHON_BIN}" "${SCRIPT_DIR}/transcribe_meeting.py" "${recording_file}"
+    echo "TIMING ${recording_name}_processing_seconds=$((SECONDS - processing_started))"
   fi
 done < "${RECORDINGS_FILE}"
 

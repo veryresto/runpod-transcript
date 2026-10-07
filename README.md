@@ -66,6 +66,13 @@ line and run this inside the Pod:
 
 Recordings and generated files are stored under `/workspace/recordings`. Existing
 downloads and completed transcripts are reused if the batch command is restarted.
+The runner prints machine-readable `TIMING` lines for every download and
+transcription. To prepare and time all model downloads separately first, run:
+
+```bash
+set -a; source .env; set +a
+/workspace/venv/bin/python prepare-models.py
+```
 
 Download and verify the results before deleting the Pod. Stopping a Pod ends
 GPU compute charges but its persistent volume continues to incur storage fees;
