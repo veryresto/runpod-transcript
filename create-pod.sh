@@ -17,6 +17,7 @@ DATA_CENTER_IDS="${DATA_CENTER_IDS:-}"
 CONNECT_SCRIPT="${CONNECT_SCRIPT:-${SCRIPT_DIR}/connect-pod.sh}"
 DOWNLOAD_SCRIPT="${DOWNLOAD_SCRIPT:-${SCRIPT_DIR}/download-results.sh}"
 UPLOAD_SCRIPT="${UPLOAD_SCRIPT:-${SCRIPT_DIR}/upload-inputs.sh}"
+REMOTE_SETUP_SCRIPT="${REMOTE_SETUP_SCRIPT:-${SCRIPT_DIR}/setup-remote-pod.sh}"
 
 if ! command -v runpodctl >/dev/null 2>&1; then
   echo "ERROR: runpodctl is not installed or is not on PATH." >&2
@@ -126,6 +127,29 @@ mv "${DOWNLOAD_SCRIPT}.tmp" "${DOWNLOAD_SCRIPT}"
 chmod 700 "${UPLOAD_SCRIPT}.tmp"
 mv "${UPLOAD_SCRIPT}.tmp" "${UPLOAD_SCRIPT}"
 
+{
+  printf '#!/usr/bin/env bash\nset -Eeuo pipefail\n\n'
+  printf 'SSH_IP=%q\n' "${SSH_IP}"
+  printf 'SSH_PORT=%q\n' "${SSH_PORT}"
+  printf 'SSH_KEY=%q\n\n' "${SSH_KEY}"
+  printf 'ssh -i "${SSH_KEY}" -p "${SSH_PORT}" "root@${SSH_IP}" '\''bash -s'\'' <<'\''REMOTE_SETUP'\''\n'
+  printf 'set -Eeuo pipefail\n'
+  printf 'cd /workspace\n'
+  printf 'if [[ -d runpod-transcript/.git ]]; then\n'
+  printf '  git -C runpod-transcript pull --ff-only\n'
+  printf 'elif [[ -e runpod-transcript ]]; then\n'
+  printf '  echo "ERROR: /workspace/runpod-transcript exists but is not a Git repository." >&2\n'
+  printf '  exit 1\n'
+  printf 'else\n'
+  printf '  git clone https://github.com/veryresto/runpod-transcript.git\n'
+  printf 'fi\n'
+  printf 'cd runpod-transcript\n'
+  printf './setup-pod.sh\n'
+  printf 'REMOTE_SETUP\n'
+} > "${REMOTE_SETUP_SCRIPT}.tmp"
+chmod 700 "${REMOTE_SETUP_SCRIPT}.tmp"
+mv "${REMOTE_SETUP_SCRIPT}.tmp" "${REMOTE_SETUP_SCRIPT}"
+
 echo
 echo "SSH helper created: ${CONNECT_SCRIPT}"
 echo "Connect with: ${CONNECT_SCRIPT}"
@@ -133,3 +157,5 @@ echo "Download helper created: ${DOWNLOAD_SCRIPT}"
 echo "Download results with: ${DOWNLOAD_SCRIPT}"
 echo "Upload helper created: ${UPLOAD_SCRIPT}"
 echo "Upload inputs with: ${UPLOAD_SCRIPT}"
+echo "Remote setup helper created: ${REMOTE_SETUP_SCRIPT}"
+echo "Set up the Pod with: ${REMOTE_SETUP_SCRIPT}"

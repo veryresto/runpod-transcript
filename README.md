@@ -40,8 +40,16 @@ DATA_CENTER_IDS=EU-SE-1 ./create-pod.sh
 
 ## 2. Install the transcription environment
 
-Connect to the Pod using `./connect-pod.sh`, then clone this repository into the
-persistent volume:
+From your laptop, run the generated remote setup helper. It clones the repository
+when needed, pulls updates on subsequent runs, and executes `setup-pod.sh` inside
+the Pod:
+
+```bash
+./setup-remote-pod.sh
+```
+
+The existing manual workflow is also preserved. Connect using
+`./connect-pod.sh`, then run:
 
 ```bash
 cd /workspace
