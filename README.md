@@ -12,7 +12,17 @@ Install and authenticate `runpodctl`, then run:
 ```
 
 The script recreates the original Secure Cloud configuration and waits until SSH
-is reachable. Creating the Pod starts GPU billing.
+is reachable. It parses the returned SSH command and creates an executable,
+Pod-specific `connect-pod.sh` helper. Creating the Pod starts GPU billing.
+
+Connect to the newly created Pod with:
+
+```bash
+./connect-pod.sh
+```
+
+The generated helper is replaced whenever a new Pod is created and is ignored by
+Git because its host and port are temporary.
 
 By default, Runpod selects any data center with matching capacity. To restrict
 placement to a particular data center, override it explicitly:
@@ -23,8 +33,8 @@ DATA_CENTER_IDS=EU-SE-1 ./create-pod.sh
 
 ## 2. Install the transcription environment
 
-Connect to the Pod using the SSH command returned by `create-pod.sh`, then clone
-this repository into the persistent volume:
+Connect to the Pod using `./connect-pod.sh`, then clone this repository into the
+persistent volume:
 
 ```bash
 cd /workspace

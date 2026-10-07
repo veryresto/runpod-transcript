@@ -12,3 +12,4 @@ __pycache__/
 *.wav
 recordings.txt
 results/
+connect-pod.sh
