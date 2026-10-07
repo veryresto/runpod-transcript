@@ -5,7 +5,12 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${ENV_FILE:-${SCRIPT_DIR}/.env}"
 RECORDINGS_FILE="${RECORDINGS_FILE:-${SCRIPT_DIR}/recordings.txt}"
 OUTPUT_DIR="${OUTPUT_DIR:-/workspace/recordings}"
-PYTHON_BIN="${PYTHON_BIN:-/workspace/venv/bin/python}"
+if [[ -x /opt/venv/bin/python ]]; then
+  DEFAULT_PYTHON_BIN=/opt/venv/bin/python
+else
+  DEFAULT_PYTHON_BIN=/workspace/venv/bin/python
+fi
+PYTHON_BIN="${PYTHON_BIN:-${DEFAULT_PYTHON_BIN}}"
 
 [[ -f "${ENV_FILE}" ]] || { echo "ERROR: Missing ${ENV_FILE}" >&2; exit 1; }
 [[ -f "${RECORDINGS_FILE}" ]] || { echo "ERROR: Missing ${RECORDINGS_FILE}" >&2; exit 1; }

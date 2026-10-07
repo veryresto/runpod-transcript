@@ -3,6 +3,24 @@
 Reproducible setup for Indonesian meeting transcription with WhisperX, speaker
 diarization, and an RTX 4090 Runpod Pod.
 
+## Container image
+
+The production environment is built from `Dockerfile` and published by GitHub
+Actions as:
+
+```text
+ghcr.io/veryresto/runpod-transcript:latest
+```
+
+The image contains CUDA-compatible PyTorch, system packages, `/opt/venv`, and the
+application under `/opt/runpod-transcript`. Tokens, recording URLs, recordings,
+model caches, and results are never included in the image.
+
+The publishing workflow runs after changes reach `master`, for version tags, or
+when manually dispatched. A newly published GHCR package is private by default.
+Either make it public in the GitHub package settings or provide a Runpod registry
+credential with `REGISTRY_AUTH_ID` when creating a Pod.
+
 ## 1. Create the Pod from your laptop
 
 Install and authenticate `runpodctl`, then run:
@@ -11,14 +29,25 @@ Install and authenticate `runpodctl`, then run:
 ./create-pod.sh
 ```
 
-The script recreates the original Secure Cloud configuration and waits until SSH
-is reachable. It parses the returned SSH command and creates an executable,
-Pod-specific `connect-pod.sh` helper. Creating the Pod starts GPU billing.
+The script deploys `ghcr.io/veryresto/runpod-transcript:latest`, waits until SSH
+is reachable, and generates Pod-specific local helper scripts. Creating the Pod
+starts GPU billing.
 
 Connect to the newly created Pod with:
 
 ```bash
 ./connect-pod.sh
+```
+
+The complete laptop-only workflow is:
+
+```bash
+./create-pod.sh
+./setup-remote-pod.sh
+./upload-inputs.sh
+./transcribe-remote-pod.sh
+./download-results.sh
+./destroy-pod.sh
 ```
 
 After transcription finishes, download every text result into the local
@@ -38,18 +67,24 @@ placement to a particular data center, override it explicitly:
 DATA_CENTER_IDS=EU-SE-1 ./create-pod.sh
 ```
 
+For a private GHCR package:
+
+```bash
+REGISTRY_AUTH_ID=YOUR_RUNPOD_REGISTRY_AUTH_ID ./create-pod.sh
+```
+
 ## 2. Install the transcription environment
 
-From your laptop, run the generated remote setup helper. It clones the repository
-when needed, pulls updates on subsequent runs, and executes `setup-pod.sh` inside
-the Pod:
+From your laptop, run the generated remote setup helper. With the custom image,
+this only verifies CUDA and the baked Python environment; it does not download
+system or Python packages:
 
 ```bash
 ./setup-remote-pod.sh
 ```
 
-The existing manual workflow is also preserved. Connect using
-`./connect-pod.sh`, then run:
+The existing from-scratch workflow remains available when overriding `POD_IMAGE`
+with a base image. Connect using `./connect-pod.sh`, then run:
 
 ```bash
 cd /workspace
@@ -58,15 +93,16 @@ cd runpod-transcript
 ./setup-pod.sh
 ```
 
-After cloning the repository, run this from a separate terminal on your laptop to
-upload the local `.env` and `recordings.txt` files:
+Run this from your laptop to upload `.env` and `recordings.txt` into the Pod's
+`/workspace/runpod-inputs` directory:
 
 ```bash
 ./upload-inputs.sh
 ```
 
-The setup creates `/workspace/venv`. Package and model caches also live under
-`/workspace`, so they survive a Pod stop.
+The custom image uses `/opt/venv`. Model caches remain under `/workspace/.cache`,
+so they survive a Pod stop but are removed when the Pod and its volume are
+deleted. The fallback from-scratch workflow creates `/workspace/venv`.
 
 ## 3. Transcribe a meeting
 
@@ -76,7 +112,7 @@ token and supply it only for the current shell:
 
 ```bash
 export HF_TOKEN='hf_your_new_token'
-/workspace/venv/bin/python transcribe_meeting.py /workspace/meeting.webm
+/opt/venv/bin/python /opt/runpod-transcript/transcribe_meeting.py /workspace/meeting.webm
 ```
 
 Do not commit tokens to this repository. The token previously shared in chat
@@ -109,8 +145,8 @@ The runner prints machine-readable `TIMING` lines for every download and
 transcription. To prepare and time all model downloads separately first, run:
 
 ```bash
-set -a; source .env; set +a
-/workspace/venv/bin/python prepare-models.py
+set -a; source /workspace/runpod-inputs/.env; set +a
+/opt/venv/bin/python /opt/runpod-transcript/prepare-models.py
 ```
 
 Download and verify the results before deleting the Pod. Stopping a Pod ends
@@ -138,8 +174,8 @@ to delete, followed by a yes/no confirmation:
 ./destroy-pod.sh
 ```
 
-The script displays the current Pod details and requires you to type the Pod ID
-again before deletion. For deliberate non-interactive automation, pass `--yes`:
+When a Pod ID is supplied explicitly, the script requires you to type it again.
+For deliberate non-interactive automation, pass `--yes`:
 
 ```bash
 ./destroy-pod.sh POD_ID --yes
@@ -150,4 +186,5 @@ Deletion cannot be undone. It removes the Pod and its attached volume disk.
 ## Optional overrides
 
 `create-pod.sh` supports environment-variable overrides, including `POD_NAME`,
-`POD_IMAGE`, `GPU_ID`, `DATA_CENTER_IDS`, `CONTAINER_DISK_GB`, and `VOLUME_GB`.
+`POD_IMAGE`, `REGISTRY_AUTH_ID`, `GPU_ID`, `DATA_CENTER_IDS`,
+`CONTAINER_DISK_GB`, and `VOLUME_GB`.
