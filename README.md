@@ -80,10 +80,23 @@ deleting the Pod removes that volume.
 
 ## Delete a Pod and its volume disk
 
+List all existing Pods, including stopped Pods:
+
+```bash
+./list-pods.sh
+```
+
 After downloading and verifying all output, permanently delete the Pod with:
 
 ```bash
 ./destroy-pod.sh POD_ID
+```
+
+If no Pod ID is supplied, the script shows a numbered list and asks which Pod
+to delete:
+
+```bash
+./destroy-pod.sh
 ```
 
 The script displays the current Pod details and requires you to type the Pod ID
